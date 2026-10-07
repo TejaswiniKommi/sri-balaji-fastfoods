@@ -25,6 +25,7 @@ export default function App() {
           <Route path="order-success" element={<OrderSuccess />} />
           <Route path="about" element={<About />} />
           <Route path="admin" element={<Admin />} />
+<Route path="admin/menu" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
