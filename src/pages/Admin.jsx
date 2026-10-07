@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '../data/config'
 import { useEffect, useRef, useState } from 'react'
 import { Plus, TriangleAlert } from 'lucide-react'
 import Container from '../components/ui/Container'
@@ -142,7 +143,7 @@ const audioContextRef = useRef(null)
 async function updateOrderStatus(orderId, status) {
   try {
     const response = await fetch(
-      `http://localhost:8080/api/orders/${orderId}/status?status=${status}`,
+      `${API_BASE_URL}/api/orders/${orderId}/status?status=${status}`,
       {
         method: 'PUT',
       }
