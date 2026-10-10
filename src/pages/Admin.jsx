@@ -372,8 +372,19 @@ playOrderAlarm()
 
                     <p className="text-sm font-semibold text-ink-soft">
                       {order.status}  
-
                     </p>
+                    <p className="mt-1 text-sm font-semibold">
+  Payment:{' '}
+  <span
+    className={
+      order.paymentStatus === 'PAID'
+        ? 'text-green-700'
+        : 'text-orange-700'
+    }
+  >
+    {order.paymentStatus || 'PENDING'}
+  </span>
+</p>
                     <div className="mt-3 flex flex-wrap justify-end gap-2">
   {order.status === 'NEW' && (
     <Button
