@@ -433,16 +433,20 @@ playOrderAlarm()
       Address: {order.address}
     </p>
 
-    <a
-      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-        order.address + ', Nellore, Andhra Pradesh, India'
-      )}&travelmode=driving`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-2 inline-flex items-center gap-2 font-bold text-brand-700 underline hover:text-brand-800"
-    >
-      📍 Get directions in Google Maps
-    </a>
+    
+<a
+  href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+    'Settigunta Road, Weavers Colony, opposite Canara Bank ATM, Nellore, Andhra Pradesh 524004, India'
+  )}&destination=${encodeURIComponent(
+    order.address + ', Nellore, Andhra Pradesh, India'
+  )}&travelmode=driving`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="mt-2 inline-flex items-center gap-2 font-bold text-brand-700 underline hover:text-brand-800"
+>
+  📍 Get directions in Google Maps
+</a>
+
   </div>
 )}
 
