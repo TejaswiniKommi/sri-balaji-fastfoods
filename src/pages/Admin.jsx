@@ -426,11 +426,26 @@ playOrderAlarm()
                     {order.orderType}
                   </p>
 
-                  {order.address && (
-                    <p className="mt-1 text-ink-soft">
-                      Address: {order.address}
-                    </p>
-                  )}
+                  
+{order.address && (
+  <div className="mt-1">
+    <p className="text-ink-soft">
+      Address: {order.address}
+    </p>
+
+    <a
+      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+        order.address + ', Nellore, Andhra Pradesh, India'
+      )}&travelmode=driving`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-2 inline-flex items-center gap-2 font-bold text-brand-700 underline hover:text-brand-800"
+    >
+      📍 Get directions in Google Maps
+    </a>
+  </div>
+)}
+
 
                   <div className="mt-3 space-y-2">
                     {order.items?.map((item) => (
