@@ -434,11 +434,10 @@ playOrderAlarm()
     </p>
 
     
+
 <a
   href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
-    
-'CANARA BANK ATM, D.NO, 3/667, Setti Gunta Rd, Lakshmipuram, Nellore, Andhra Pradesh 524002, India'
-
+    '14.4639134,79.9946353'
   )}&destination=${encodeURIComponent(
     order.address + ', Nellore, Andhra Pradesh, India'
   )}&travelmode=driving`}
