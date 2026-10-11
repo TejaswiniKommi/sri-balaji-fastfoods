@@ -436,7 +436,9 @@ playOrderAlarm()
     
 <a
   href={`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
-    'Settigunta Road, Weavers Colony, opposite Canara Bank ATM, Nellore, Andhra Pradesh 524004, India'
+    
+'CANARA BANK ATM, D.NO, 3/667, Setti Gunta Rd, Lakshmipuram, Nellore, Andhra Pradesh 524002, India'
+
   )}&destination=${encodeURIComponent(
     order.address + ', Nellore, Andhra Pradesh, India'
   )}&travelmode=driving`}
