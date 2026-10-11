@@ -1,3 +1,4 @@
+
 import { request } from './apiClient'
 import { USE_MOCK_ORDERS } from '../data/config'
 
@@ -9,22 +10,13 @@ function generateOrderNumber() {
   return `SBF-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
 }
 
-/**
- * Convert frontend order format
- * to the Spring Boot OrderRequest format.
- */
 function toApiOrder(order) {
   return {
     customerName: order.customerName,
-
     mobileNumber: order.mobile,
-
     address: order.address || '',
-
     orderType: order.fulfillment.toUpperCase(),
-
     totalAmount: order.total,
-
     items: order.items.map((item) => ({
       foodName: item.name,
       price: Number(item.price),
@@ -34,40 +26,21 @@ function toApiOrder(order) {
   }
 }
 
-/**
- * Convert Spring Boot response
- * to the format used by the Order Success page.
- */
 function normalizeOrder(saved, draft) {
   return {
     ...draft,
-
     id: saved?.id,
-
-    orderNumber:
-      saved?.id != null
-        ? `SBF-${saved.id}`
-        : draft.orderNumber,
-
-    createdAt:
-      saved?.orderDate ?? draft.createdAt,
-
-    total:
-      saved?.totalAmount ?? draft.total,
-
-    status:
-      saved?.status ?? 'NEW',
-
-    items:
-      saved?.items ?? draft.items,
-
+    orderNumber: saved?.id != null ? `SBF-${saved.id}` : draft.orderNumber,
+    createdAt: saved?.orderDate ?? draft.createdAt,
+    total: saved?.totalAmount ?? draft.total,
+    status: saved?.status ?? 'NEW',
+    paymentStatus: saved?.paymentStatus ?? 'PENDING',
+    items: saved?.items ?? draft.items,
     isMock: false,
   }
 }
 
-/**
- * Place customer order.
- */
+// Customer checkout: public endpoint
 export async function placeOrder(order) {
   const draft = {
     ...order,
@@ -75,18 +48,16 @@ export async function placeOrder(order) {
     createdAt: new Date().toISOString(),
   }
 
-  // Mock order mode
   if (USE_MOCK_ORDERS) {
     await delay(800)
-
     return {
       ...draft,
       isMock: true,
       status: 'NEW',
+      paymentStatus: 'PENDING',
     }
   }
 
-  // Real Spring Boot API
   const saved = await request(ORDERS_PATH, {
     method: 'POST',
     body: toApiOrder(order),
@@ -95,13 +66,25 @@ export async function placeOrder(order) {
   return normalizeOrder(saved, draft)
 }
 
-/**
- * Get all customer orders
- * from the Spring Boot backend.
- */
+// Admin only: load all customer orders
 export async function getAllOrders() {
-  return request(ORDERS_PATH)
+  return request(ORDERS_PATH, { admin: true })
 }
-  export async function getOrderById(id) {
-  return request(`${ORDERS_PATH}/${id}`)
-  }
+
+// Admin only: retrieve full details for one order
+export async function getOrderById(id) {
+  return request(`${ORDERS_PATH}/${encodeURIComponent(id)}`, {
+    admin: true,
+  })
+}
+
+// Customer tracking: verify mobile number and return tracking status only
+export async function trackOrder(id, mobileNumber) {
+  return request(
+    `${ORDERS_PATH}/${encodeURIComponent(id)}/track`,
+    {
+      method: 'POST',
+      body: { mobileNumber },
+    },
+  )
+}

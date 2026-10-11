@@ -1,18 +1,18 @@
+
 import { request, ApiError } from './apiClient'
 import { USE_MOCK_FOODS, STORAGE_KEYS } from '../data/config'
 import { MOCK_FOODS } from '../data/menu.mock'
 
 const FOODS_PATH = '/api/foods'
 
-// ---------------------------------------------------------------------------
-// Field mapping between your Spring Boot Food entity and the UI.
-// If your entity uses different field names, change ONLY these two functions.
-// ---------------------------------------------------------------------------
-
-/** Spring Boot JSON  ->  shape used by the UI */
+// Spring Boot JSON -> UI format
 export function normalizeFood(raw = {}) {
   const priceRaw = raw.price
-  const price = priceRaw === null || priceRaw === undefined || priceRaw === '' ? null : Number(priceRaw)
+  const price =
+    priceRaw === null || priceRaw === undefined || priceRaw === ''
+      ? null
+      : Number(priceRaw)
+
   return {
     id: raw.id,
     name: raw.name ?? '',
@@ -27,14 +27,14 @@ export function normalizeFood(raw = {}) {
   }
 }
 
-/** UI shape  ->  JSON sent to Spring Boot (POST / PUT) */
+// UI format -> Spring Boot JSON
 export function toApiFood(food) {
   return {
     name: food.name,
     nameTe: food.nameTe,
     category: food.category,
     variant: food.variant,
-    price: food.price, // null when "Price to be confirmed"
+    price: food.price,
     description: food.description,
     imageUrl: food.image,
     available: food.available,
@@ -42,9 +42,7 @@ export function toApiFood(food) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Mock store (used when VITE_USE_MOCK=true). Admin edits are kept in this browser's localStorage.
-// ---------------------------------------------------------------------------
+// Mock store for local sample-data mode
 const delay = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function loadMockDb() {
@@ -52,9 +50,10 @@ function loadMockDb() {
     const saved = localStorage.getItem(STORAGE_KEYS.mockFoods)
     if (saved) return JSON.parse(saved)
   } catch {
-    /* ignore corrupted storage */
+    // Ignore corrupted storage
   }
-  return MOCK_FOODS.map((f) => ({ ...f }))
+
+  return MOCK_FOODS.map((food) => ({ ...food }))
 }
 
 let mockDb = loadMockDb()
@@ -63,78 +62,118 @@ function saveMockDb() {
   try {
     localStorage.setItem(STORAGE_KEYS.mockFoods, JSON.stringify(mockDb))
   } catch {
-    /* storage full or blocked: keep working in memory */
+    // Keep working in memory if storage is unavailable
   }
 }
 
-/** Restore the sample menu from menu.mock.js (mock mode only) */
+// Restore sample menu in mock mode
 export function resetMockFoods() {
-  mockDb = MOCK_FOODS.map((f) => ({ ...f }))
+  mockDb = MOCK_FOODS.map((food) => ({ ...food }))
   saveMockDb()
 }
 
-// ---------------------------------------------------------------------------
-// Public API: the only functions UI code should call
-// ---------------------------------------------------------------------------
-
-/** GET /api/foods */
+// GET /api/foods — public menu
 export async function getFoods({ signal } = {}) {
   if (USE_MOCK_FOODS) {
     await delay()
     return mockDb.map(normalizeFood)
   }
+
   const data = await request(FOODS_PATH, { signal })
-  const list = Array.isArray(data) ? data : data?.content ?? [] // plain list or Spring Page
+  const list = Array.isArray(data) ? data : data?.content ?? []
+
   return list.map(normalizeFood)
 }
 
-/** GET /api/foods/{id} */
+// GET /api/foods/{id} — public food details
 export async function getFoodById(id, { signal } = {}) {
   if (USE_MOCK_FOODS) {
     await delay(250)
-    const found = mockDb.find((f) => String(f.id) === String(id))
-    if (!found) throw new ApiError("We couldn't find that item on the menu.", { status: 404 })
+
+    const found = mockDb.find((food) => String(food.id) === String(id))
+
+    if (!found) {
+      throw new ApiError("We couldn't find that item on the menu.", {
+        status: 404,
+      })
+    }
+
     return normalizeFood(found)
   }
-  return normalizeFood(await request(`${FOODS_PATH}/${encodeURIComponent(id)}`, { signal }))
-}
 
-/** POST /api/foods */
-export async function createFood(food) {
-  if (USE_MOCK_FOODS) {
-    await delay()
-    const nextId = mockDb.reduce((max, f) => Math.max(max, Number(f.id) || 0), 0) + 1
-    const created = { ...food, id: nextId }
-    mockDb = [...mockDb, created]
-    saveMockDb()
-    return normalizeFood(created)
-  }
-  return normalizeFood(await request(FOODS_PATH, { method: 'POST', body: toApiFood(food) }))
-}
-
-/** PUT /api/foods/{id} */
-export async function updateFood(id, food) {
-  if (USE_MOCK_FOODS) {
-    await delay()
-    if (!mockDb.some((f) => String(f.id) === String(id))) {
-      throw new ApiError("We couldn't find that item on the menu.", { status: 404 })
-    }
-    mockDb = mockDb.map((f) => (String(f.id) === String(id) ? { ...f, ...food, id: f.id } : f))
-    saveMockDb()
-    return normalizeFood(mockDb.find((f) => String(f.id) === String(id)))
-  }
   return normalizeFood(
-    await request(`${FOODS_PATH}/${encodeURIComponent(id)}`, { method: 'PUT', body: toApiFood(food) }),
+    await request(`${FOODS_PATH}/${encodeURIComponent(id)}`, { signal }),
   )
 }
 
-/** DELETE /api/foods/{id} */
+// POST /api/foods — ADMIN ONLY
+export async function createFood(food) {
+  if (USE_MOCK_FOODS) {
+    await delay()
+
+    const nextId =
+      mockDb.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0) + 1
+
+    const created = { ...food, id: nextId }
+    mockDb = [...mockDb, created]
+    saveMockDb()
+
+    return normalizeFood(created)
+  }
+
+  return normalizeFood(
+    await request(FOODS_PATH, {
+      method: 'POST',
+      body: toApiFood(food),
+      admin: true,
+    }),
+  )
+}
+
+// PUT /api/foods/{id} — ADMIN ONLY
+export async function updateFood(id, food) {
+  if (USE_MOCK_FOODS) {
+    await delay()
+
+    if (!mockDb.some((item) => String(item.id) === String(id))) {
+      throw new ApiError("We couldn't find that item on the menu.", {
+        status: 404,
+      })
+    }
+
+    mockDb = mockDb.map((item) =>
+      String(item.id) === String(id)
+        ? { ...item, ...food, id: item.id }
+        : item,
+    )
+
+    saveMockDb()
+
+    return normalizeFood(
+      mockDb.find((item) => String(item.id) === String(id)),
+    )
+  }
+
+  return normalizeFood(
+    await request(`${FOODS_PATH}/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: toApiFood(food),
+      admin: true,
+    }),
+  )
+}
+
+// DELETE /api/foods/{id} — ADMIN ONLY
 export async function deleteFood(id) {
   if (USE_MOCK_FOODS) {
     await delay()
-    mockDb = mockDb.filter((f) => String(f.id) !== String(id))
+    mockDb = mockDb.filter((item) => String(item.id) !== String(id))
     saveMockDb()
     return null
   }
-  return request(`${FOODS_PATH}/${encodeURIComponent(id)}`, { method: 'DELETE' })
+
+  return request(`${FOODS_PATH}/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    admin: true,
+  })
 }

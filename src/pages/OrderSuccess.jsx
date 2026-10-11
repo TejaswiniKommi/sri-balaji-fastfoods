@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { CircleCheck, Info } from 'lucide-react'
@@ -8,7 +7,7 @@ import EmptyState from '../components/ui/EmptyState'
 import OrderSummary from '../components/checkout/OrderSummary'
 import { STORAGE_KEYS } from '../data/config'
 import { formatDateTime } from '../utils/format'
-import { getOrderById } from '../services/orderService'
+import { trackOrder } from '../services/orderService'
 
 const ORDER_STEPS = [
   { value: 'NEW', label: 'Order received' },
@@ -29,24 +28,27 @@ function readSavedOrder() {
 
 export default function OrderSuccess() {
   const { state } = useLocation()
-  const [order, setOrder] = useState(
-    state?.order ?? readSavedOrder()
-  )
+  const [order, setOrder] = useState(state?.order ?? readSavedOrder())
 
-  // Refresh the current order from the backend every 5 seconds.
+  // Refresh order status using the customer's mobile-number verification.
   useEffect(() => {
     const orderId = order?.id
+    const mobileNumber = order?.mobile ?? order?.mobileNumber
 
-    if (!orderId || order.isMock || order.status === 'DELIVERED') {
-      return
+    if (
+      !orderId ||
+      !mobileNumber ||
+      order.isMock ||
+      order.status === 'DELIVERED'
+    ) {
+      return undefined
     }
 
     let active = true
 
     async function refreshOrderStatus() {
       try {
-        const latest = await getOrderById(orderId)
-
+        const latest = await trackOrder(orderId, mobileNumber)
         if (!active) return
 
         setOrder((current) => {
@@ -55,14 +57,13 @@ export default function OrderSuccess() {
           const updated = {
             ...current,
             status: latest.status ?? current.status,
-            paymentStatus:
-              latest.paymentStatus ?? current.paymentStatus,
+            paymentStatus: latest.paymentStatus ?? current.paymentStatus,
           }
 
           try {
             sessionStorage.setItem(
               STORAGE_KEYS.lastOrder,
-              JSON.stringify(updated)
+              JSON.stringify(updated),
             )
           } catch {
             // Tracking still works if session storage is unavailable.
@@ -76,14 +77,19 @@ export default function OrderSuccess() {
     }
 
     refreshOrderStatus()
-
     const interval = window.setInterval(refreshOrderStatus, 5000)
 
     return () => {
       active = false
       window.clearInterval(interval)
     }
-  }, [order?.id, order?.isMock, order?.status])
+  }, [
+    order?.id,
+    order?.isMock,
+    order?.status,
+    order?.mobile,
+    order?.mobileNumber,
+  ])
 
   if (!order) {
     return (
@@ -101,11 +107,9 @@ export default function OrderSuccess() {
 
   const currentStatus = String(order.status || 'NEW').toUpperCase()
   const currentIndex = ORDER_STEPS.findIndex(
-    (step) => step.value === currentStatus
+    (step) => step.value === currentStatus,
   )
-  const paymentStatus = String(
-    order.paymentStatus || 'PENDING'
-  ).toUpperCase()
+  const paymentStatus = String(order.paymentStatus || 'PENDING').toUpperCase()
 
   const fulfillment =
     order.fulfillment?.toLowerCase() === 'pickup' ||
@@ -157,15 +161,12 @@ export default function OrderSuccess() {
           aria-labelledby="tracking-title"
           className="mt-8 rounded-3xl bg-white p-5 shadow-card sm:p-6"
         >
-          <h2
-            id="tracking-title"
-            className="text-2xl font-extrabold text-ink"
-          >
+          <h2 id="tracking-title" className="text-2xl font-extrabold text-ink">
             Track your order
           </h2>
 
           <p className="mt-1 text-sm text-ink-soft">
-            Your order status refreshes automatically.
+            Your order status refreshes automatically when your order and mobile number are available in this browser session.
           </p>
 
           <div className="mt-4 rounded-xl bg-cream-50 p-4">
@@ -192,8 +193,7 @@ export default function OrderSuccess() {
 
           <ol className="mt-5 space-y-3">
             {ORDER_STEPS.map((step, index) => {
-              const completed =
-                currentIndex >= index && currentIndex !== -1
+              const completed = currentIndex >= index && currentIndex !== -1
               const current = currentStatus === step.value
 
               return (
@@ -248,10 +248,7 @@ export default function OrderSuccess() {
             aria-labelledby="customer-title"
             className="rounded-3xl bg-white p-5 shadow-card sm:p-6"
           >
-            <h2
-              id="customer-title"
-              className="text-2xl font-extrabold text-ink"
-            >
+            <h2 id="customer-title" className="text-2xl font-extrabold text-ink">
               Customer information
             </h2>
 
@@ -264,9 +261,7 @@ export default function OrderSuccess() {
                   <dt className="w-28 shrink-0 font-bold text-ink-soft">
                     {label}
                   </dt>
-                  <dd className="break-words text-ink">
-                    {value || '—'}
-                  </dd>
+                  <dd className="break-words text-ink">{value || '—'}</dd>
                 </div>
               ))}
             </dl>
